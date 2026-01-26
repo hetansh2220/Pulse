@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Apply filters
+    // Apply filters (use calculated prices from transformMarketData)
     let filteredMarkets = allMarkets;
 
     if (category && category !== 'all') {

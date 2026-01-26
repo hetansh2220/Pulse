@@ -25,16 +25,6 @@ export default function MarketsPage() {
     search: debouncedSearch || undefined,
   });
 
-  // Console log all market data
-  if (data?.markets) {
-    console.log('=== ALL MARKET DATA ===');
-    console.log('Total markets:', data.total);
-    data.markets.forEach((market, index) => {
-      console.log(`\n--- Market ${index + 1} ---`);
-      console.log(JSON.stringify(market, null, 2));
-    });
-  }
-
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     const timer = setTimeout(() => {
@@ -50,7 +40,7 @@ export default function MarketsPage() {
     const filterDate = new Date(dateFilter);
     // Show markets ending on or before the selected date
     return marketEndDate.toDateString() === filterDate.toDateString() ||
-           marketEndDate <= filterDate;
+      marketEndDate <= filterDate;
   }) || [];
 
   const clearFilters = () => {
@@ -142,9 +132,8 @@ export default function MarketsPage() {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className={`h-11 px-4 bg-[#12121a] border-[#1e1e2e] hover:bg-[#1a1a24] hover:border-[#c8ff00]/30 text-sm rounded-lg ${
-                  dateFilter ? 'text-[#c8ff00] border-[#c8ff00]/30' : 'text-[#6b6b7b]'
-                }`}
+                className={`h-11 px-4 bg-[#12121a] border-[#1e1e2e] hover:bg-[#1a1a24] hover:border-[#c8ff00]/30 text-sm rounded-lg ${dateFilter ? 'text-[#c8ff00] border-[#c8ff00]/30' : 'text-[#6b6b7b]'
+                  }`}
               >
                 <CalendarIcon className="size-4 mr-2" />
                 {dateFilter ? format(dateFilter, 'MMM d, yyyy') : 'End Date'}

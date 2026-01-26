@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { MARKET_CATEGORIES, MARKET_TYPES, MIN_MARKET_LIQUIDITY } from '@/lib/constants';
 import type { MarketCategory } from '@/lib/constants';
-import { toast } from 'sonner';
+import { useCreateMarket, type P2PSide } from '@/hooks/use-create-market';
 import {
   PlusCircle,
   Loader2,
@@ -14,7 +14,9 @@ import {
   Coins,
   Globe,
   AlertCircle,
-  Zap
+  Zap,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 
 const categoryIcons = {
@@ -26,7 +28,7 @@ const categoryIcons = {
 
 export default function CreateMarketPage() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const createMarket = useCreateMarket();
 
   const [formData, setFormData] = useState({
     question: '',
@@ -39,6 +41,9 @@ export default function CreateMarketPage() {
     youtubeUrl: '',
     protocolName: '',
     tokenAddress: '',
+    // P2P specific
+    side: 'yes' as P2PSide,
+    creatorSideCap: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -101,43 +106,33 @@ export default function CreateMarketPage() {
     e.preventDefault();
     if (!validate()) return;
 
-    setIsSubmitting(true);
+    const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
 
-    try {
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
-
-      const response = await fetch('/api/create-market', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: formData.question,
-          category: formData.category,
-          marketType: formData.marketType,
-          endTime: endDateTime.toISOString(),
-          initialLiquidity: formData.initialLiquidity,
-          tweetUrl: formData.tweetUrl || undefined,
-          youtubeUrl: formData.youtubeUrl || undefined,
-          protocolName: formData.protocolName || undefined,
-          tokenAddress: formData.tokenAddress || undefined,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Market created successfully!');
-        router.push(`/markets/${result.marketPublicKey}`);
-      } else {
-        toast.error(result.error || 'Failed to create market');
+    createMarket.mutate(
+      {
+        question: formData.question,
+        category: formData.category,
+        marketType: formData.marketType,
+        endTime: endDateTime,
+        initialLiquidity: parseFloat(formData.initialLiquidity),
+        tweetUrl: formData.tweetUrl || undefined,
+        youtubeUrl: formData.youtubeUrl || undefined,
+        protocolName: formData.protocolName || undefined,
+        tokenAddress: formData.tokenAddress || undefined,
+        side: formData.marketType === 'p2p' ? formData.side : undefined,
+        creatorSideCap: formData.creatorSideCap ? parseFloat(formData.creatorSideCap) : undefined,
+      },
+      {
+        onSuccess: (result) => {
+          if (result.marketPublicKey) {
+            router.push(`/markets/${result.marketPublicKey}`);
+          }
+        },
       }
-    } catch {
-      toast.error('Failed to create market');
-    } finally {
-      setIsSubmitting(false);
-    }
+    );
   };
 
-  const CategoryIcon = categoryIcons[formData.category];
+  const isSubmitting = createMarket.isPending;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -321,6 +316,63 @@ export default function CreateMarketPage() {
                 })}
               </div>
             </div>
+
+            {/* P2P Specific Fields */}
+            {formData.marketType === 'p2p' && (
+              <div className="space-y-4 p-4 bg-[#1a1a24] border border-[#c8ff00]/10 rounded-lg">
+                <div>
+                  <label className="block text-xs font-mono text-[#6b6b7b] mb-2">
+                    Your Position
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, side: 'yes' })}
+                      className={`p-4 text-center transition-all ${
+                        formData.side === 'yes'
+                          ? 'bg-[#2ed573]/20 border-2 border-[#2ed573] text-[#2ed573]'
+                          : 'bg-[#12121a] border border-[#c8ff00]/10 text-[#6b6b7b] hover:border-[#2ed573]/50'
+                      }`}
+                    >
+                      <ThumbsUp className="size-5 mx-auto mb-1" />
+                      <span className="text-sm font-medium">YES</span>
+                      <p className="text-xs opacity-70 mt-1">Bet on outcome happening</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, side: 'no' })}
+                      className={`p-4 text-center transition-all ${
+                        formData.side === 'no'
+                          ? 'bg-[#ff4757]/20 border-2 border-[#ff4757] text-[#ff4757]'
+                          : 'bg-[#12121a] border border-[#c8ff00]/10 text-[#6b6b7b] hover:border-[#ff4757]/50'
+                      }`}
+                    >
+                      <ThumbsDown className="size-5 mx-auto mb-1" />
+                      <span className="text-sm font-medium">NO</span>
+                      <p className="text-xs opacity-70 mt-1">Bet against outcome</p>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-[#6b6b7b] mb-2">
+                    Maximum Exposure (USDC)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="500"
+                    min={0}
+                    step="1"
+                    value={formData.creatorSideCap}
+                    onChange={(e) => setFormData({ ...formData, creatorSideCap: e.target.value })}
+                    className="h-12 bg-[#12121a] border-[#c8ff00]/10 focus:border-[#c8ff00]/30 font-mono"
+                  />
+                  <p className="text-xs text-[#6b6b7b] mt-1">
+                    Maximum amount you're willing to risk on your position
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>

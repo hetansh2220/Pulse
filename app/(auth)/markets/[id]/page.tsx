@@ -16,7 +16,8 @@ import {
   Activity
 } from 'lucide-react';
 import { estimateTokensReceived, estimateUsdcReceived, getBufferTimeRemaining } from '@/lib/market-utils';
-import { formatCurrency, formatTokenPrice, formatProbability } from '@/lib/format';
+import { formatCurrency, formatTokenPrice } from '@/lib/format';
+import PriceChart from '@/components/markets/PriceChart';
 
 export default function MarketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -144,110 +145,40 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
         <div className="lg:col-span-2 space-y-6">
           {/* Price Chart Section */}
           <div className="bg-[#12121a] border border-[#c8ff00]/10 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Activity className="size-5 text-[#c8ff00]" />
-                <span className="font-mono text-sm text-[#6b6b7b]">Price Chart</span>
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-6">
+              <Activity className="size-5 text-[#c8ff00]" />
+              <span className="font-mono text-sm text-[#6b6b7b]">Price History</span>
+            </div>
+
+            {/* Volume Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-[#0a0a0f]/50 rounded-lg">
+              <div>
+                <p className="text-[10px] font-mono text-[#6b6b7b] uppercase">Volume</p>
+                <p className="text-lg font-bold text-white tabular-nums">
+                  {formatCurrency(parseFloat(market.volume) / 1_000_000)}
+                </p>
               </div>
-              <div className="flex items-center gap-4 text-xs font-mono">
-                <span className="flex items-center gap-2">
-                  <span className="size-3 rounded-sm bg-[#2ed573]" />
-                  YES {formatTokenPrice(market.currentYesPrice)} ({formatProbability(market.currentYesPrice)})
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="size-3 rounded-sm bg-[#ff4757]" />
-                  NO {formatTokenPrice(market.currentNoPrice)} ({formatProbability(market.currentNoPrice)})
-                </span>
+              <div>
+                <p className="text-[10px] font-mono text-[#6b6b7b] uppercase">Liquidity</p>
+                <p className="text-lg font-bold text-white tabular-nums">
+                  {formatCurrency(parseFloat(market.initialLiquidity) / 1_000_000)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono text-[#6b6b7b] uppercase">Reserves</p>
+                <p className="text-lg font-bold text-white tabular-nums">
+                  {formatCurrency(parseFloat(market.marketReserves) / 1_000_000)}
+                </p>
               </div>
             </div>
 
-            {/* Chart Area */}
-            <div className="relative h-64 bg-[#0a0a0f]/50 rounded-lg overflow-hidden">
-              {/* Grid lines */}
-              <div className="absolute inset-0">
-                {[0.25, 0.5, 0.75].map((y) => (
-                  <div
-                    key={y}
-                    className="absolute w-full border-t border-[#2a2a3a]/50"
-                    style={{ top: `${y * 100}%` }}
-                  />
-                ))}
-              </div>
-
-              {/* Y-axis labels */}
-              <div className="absolute left-2 top-0 bottom-0 flex flex-col justify-between py-2 text-[10px] font-mono text-[#6b6b7b]">
-                <span>$1.00</span>
-                <span>$0.75</span>
-                <span>$0.50</span>
-                <span>$0.25</span>
-                <span>$0.00</span>
-              </div>
-
-              {/* Bar Chart */}
-              <div className="absolute left-10 right-4 top-4 bottom-8 flex items-end justify-around gap-1">
-                {[...Array(24)].map((_, i) => {
-                  // Generate price history simulation based on current price
-                  const baseYes = market.currentYesPrice;
-                  const variance = Math.sin((i / 24) * Math.PI * 3 + baseYes * 5) * 0.15;
-                  const historicalYes = Math.max(0.05, Math.min(0.95, baseYes + variance - (24 - i) * 0.005));
-                  const isRecent = i >= 20;
-
-                  return (
-                    <div key={i} className="flex-1 flex flex-col gap-0.5 h-full justify-end">
-                      <div
-                        className="w-full rounded-t transition-all"
-                        style={{
-                          height: `${historicalYes * 100}%`,
-                          backgroundColor: isRecent ? '#2ed573' : '#2ed573',
-                          opacity: isRecent ? 1 : 0.3 + (i / 24) * 0.4
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Trend Line */}
-              <svg className="absolute left-10 right-4 top-4 bottom-8" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="chart-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#c8ff00" stopOpacity="0.2" />
-                    <stop offset="100%" stopColor="#c8ff00" stopOpacity="1" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d={`M0,${(1 - market.currentYesPrice + 0.1) * 100}% ${[...Array(12)].map((_, i) => {
-                    const x = (i + 1) * (100 / 12);
-                    const variance = Math.sin((i / 12) * Math.PI * 2 + market.currentYesPrice * 4) * 10;
-                    const y = (1 - market.currentYesPrice) * 100 + variance - (i * 0.8);
-                    return `L${x}%,${Math.max(5, Math.min(95, y))}%`;
-                  }).join(' ')}`}
-                  fill="none"
-                  stroke="url(#chart-gradient)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-
-              {/* Current Price Indicator */}
-              <div
-                className="absolute right-4 w-24 flex items-center gap-1"
-                style={{ top: `${(1 - market.currentYesPrice) * 100}%`, transform: 'translateY(-50%)' }}
-              >
-                <div className="flex-1 border-t-2 border-dashed border-[#c8ff00]" />
-                <span className="text-xs font-mono text-[#c8ff00] bg-[#12121a] px-1">
-                  {formatTokenPrice(market.currentYesPrice)}
-                </span>
-              </div>
-            </div>
-
-            {/* Time labels */}
-            <div className="flex justify-between mt-2 px-10 text-[10px] font-mono text-[#6b6b7b]">
-              <span>24h ago</span>
-              <span>12h ago</span>
-              <span>Now</span>
-            </div>
+            {/* Real Price Chart */}
+            <PriceChart
+              marketId={market.id}
+              currentYesPrice={market.currentYesPrice}
+              currentNoPrice={market.currentNoPrice}
+            />
 
             {/* Price Distribution Bar */}
             <div className="mt-6 pt-6 border-t border-[#2a2a3a]">
@@ -284,7 +215,7 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                 {formatTokenPrice(market.currentYesPrice)}
               </p>
               <p className="text-sm font-mono text-[#6b6b7b] mt-2">
-                {formatProbability(market.currentYesPrice)} probability
+                {(market.currentYesPrice * 100).toFixed(1)}% chance
               </p>
             </div>
             <div className="bg-[#12121a] border border-[#ff4757]/20 p-6">
@@ -296,7 +227,7 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                 {formatTokenPrice(market.currentNoPrice)}
               </p>
               <p className="text-sm font-mono text-[#6b6b7b] mt-2">
-                {formatProbability(market.currentNoPrice)} probability
+                {(market.currentNoPrice * 100).toFixed(1)}% chance
               </p>
             </div>
           </div>
@@ -421,9 +352,6 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-xl font-bold tabular-nums">
                   {formatTokenPrice(market.currentYesPrice)}
                 </p>
-                <p className="text-xs font-mono mt-1 opacity-70">
-                  {formatProbability(market.currentYesPrice)}
-                </p>
               </button>
               <button
                 onClick={() => setTokenType('no')}
@@ -437,9 +365,6 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-xs font-mono mb-1">NO</p>
                 <p className="text-xl font-bold tabular-nums">
                   {formatTokenPrice(market.currentNoPrice)}
-                </p>
-                <p className="text-xs font-mono mt-1 opacity-70">
-                  {formatProbability(market.currentNoPrice)}
                 </p>
               </button>
             </div>
@@ -472,7 +397,7 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#6b6b7b] font-mono">Eff. Price</span>
-                      <span className="font-mono font-medium">{formatTokenPrice(effectivePrice)}</span>
+                      <span className="font-mono font-medium">${effectivePrice.toFixed(4)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-[#c8ff00]/10">
                       <span className="text-[#6b6b7b] font-mono">Potential Return</span>
@@ -489,7 +414,7 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#6b6b7b] font-mono">Eff. Price</span>
-                      <span className="font-mono font-medium">{formatTokenPrice(effectivePrice)}</span>
+                      <span className="font-mono font-medium">${effectivePrice.toFixed(4)}</span>
                     </div>
                   </>
                 )}

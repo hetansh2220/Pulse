@@ -69,7 +69,10 @@ export function transformMarketData(rawMarket: any): Market {
   const yesSupply = rawMarket.yes_token_supply_minted?.toString() || '0';
   const noSupply = rawMarket.no_token_supply_minted?.toString() || '0';
 
-  const { yesPrice, noPrice } = calculatePrices(yesSupply, noSupply);
+  // Use real prices from getMarketPriceV2 if provided, otherwise calculate from supplies
+  const calculatedPrices = calculatePrices(yesSupply, noSupply);
+  const yesPrice = rawMarket.realYesPrice ?? calculatedPrices.yesPrice;
+  const noPrice = rawMarket.realNoPrice ?? calculatedPrices.noPrice;
 
   const bufferActive = isInBufferPeriod(creationTimeISO);
 
@@ -100,6 +103,8 @@ export function transformMarketData(rawMarket: any): Market {
     volume: '0', // Volume not provided by SDK, would need to track trades
     currentYesPrice: yesPrice,
     currentNoPrice: noPrice,
+    yesMultiplier: rawMarket.yesMultiplier,
+    noMultiplier: rawMarket.noMultiplier,
     endTime: endTimeISO,
     creationTime: creationTimeISO,
     resolved: rawMarket.resolved || false,

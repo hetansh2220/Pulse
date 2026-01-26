@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bookmark } from 'lucide-react';
 import { getMarketDisplayStatus, getStatusStyles } from '@/lib/market-utils';
+import { formatTokenPrice } from '@/lib/format';
 import type { Market } from '@/types/market';
 
 interface MarketCardProps {
@@ -32,6 +33,7 @@ export default function MarketCard({ market }: MarketCardProps) {
   });
 
   const handleClick = () => {
+    console.log(`Navigating to ${JSON.stringify(market)}`);
     router.push(`/markets/${market.id}`);
   };
 
@@ -43,9 +45,8 @@ export default function MarketCard({ market }: MarketCardProps) {
   return (
     <div
       onClick={handleClick}
-      className={`relative bg-[#12121a] border border-[#1e1e2e] hover:border-[#c8ff00]/30 rounded-xl overflow-hidden cursor-pointer transition-all group ${
-        isEnded ? 'opacity-75' : ''
-      }`}
+      className={`relative bg-[#12121a] border border-[#1e1e2e] hover:border-[#c8ff00]/30 rounded-xl overflow-hidden cursor-pointer transition-all group ${isEnded ? 'opacity-75' : ''
+        }`}
     >
       <div className="p-4">
         {/* Header: Status & Bookmark */}
@@ -71,22 +72,36 @@ export default function MarketCard({ market }: MarketCardProps) {
         {/* Price Buttons */}
         <div className="flex gap-2 mb-3">
           <button
-            className="flex-1 flex items-center justify-between px-3 py-2.5 bg-[#2ed573]/10 border border-[#2ed573]/30 rounded-lg hover:bg-[#2ed573]/20 hover:border-[#2ed573]/50 transition-all"
+            className="flex-1 flex flex-col items-start px-3 py-2.5 bg-[#2ed573]/10 border border-[#2ed573]/30 rounded-lg hover:bg-[#2ed573]/20 hover:border-[#2ed573]/50 transition-all"
             onClick={(e) => { e.stopPropagation(); handleClick(); }}
           >
-            <span className="text-sm font-medium text-[#2ed573]">YES</span>
-            <span className="text-base font-bold text-[#2ed573] tabular-nums">
-              ${market.currentYesPrice.toFixed(2)}
-            </span>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-sm font-medium text-[#2ed573]">YES</span>
+              <span className="text-base font-bold text-[#2ed573] tabular-nums">
+                {formatTokenPrice(market.currentYesPrice)}
+              </span>
+            </div>
+            {market.yesMultiplier && (
+              <span className="text-[10px] text-[#2ed573]/70 font-mono mt-0.5">
+                {market.yesMultiplier.toFixed(2)}x payout
+              </span>
+            )}
           </button>
           <button
-            className="flex-1 flex items-center justify-between px-3 py-2.5 bg-[#ff4757]/10 border border-[#ff4757]/30 rounded-lg hover:bg-[#ff4757]/20 hover:border-[#ff4757]/50 transition-all"
+            className="flex-1 flex flex-col items-start px-3 py-2.5 bg-[#ff4757]/10 border border-[#ff4757]/30 rounded-lg hover:bg-[#ff4757]/20 hover:border-[#ff4757]/50 transition-all"
             onClick={(e) => { e.stopPropagation(); handleClick(); }}
           >
-            <span className="text-sm font-medium text-[#ff4757]">NO</span>
-            <span className="text-base font-bold text-[#ff4757] tabular-nums">
-              ${market.currentNoPrice.toFixed(2)}
-            </span>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-sm font-medium text-[#ff4757]">NO</span>
+              <span className="text-base font-bold text-[#ff4757] tabular-nums">
+                {formatTokenPrice(market.currentNoPrice)}
+              </span>
+            </div>
+            {market.noMultiplier && (
+              <span className="text-[10px] text-[#ff4757]/70 font-mono mt-0.5">
+                {market.noMultiplier.toFixed(2)}x payout
+              </span>
+            )}
           </button>
         </div>
 

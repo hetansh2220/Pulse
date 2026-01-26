@@ -25,11 +25,33 @@ export async function GET(
       return Response.json({ error: 'Market not found' }, { status: 404 });
     }
 
-    // Transform raw market data
+    // Fetch real prices and multipliers from SDK
+    let realPrices: { yesPrice?: number; noPrice?: number; yesMultiplier?: number; noMultiplier?: number } = {};
+    try {
+      // Get prices from trading module (yesShare/noShare are the prices)
+      if (client.trading) {
+        const priceData = await client.trading.getPrices(marketPublicKey);
+        realPrices.yesPrice = priceData.yesShare;
+        realPrices.noPrice = priceData.noShare;
+      }
+
+      // Get multipliers from market info
+      const marketInfo = await client.getV2MarketInfo(marketId);
+      realPrices.yesMultiplier = marketInfo.yesMultiplier;
+      realPrices.noMultiplier = marketInfo.noMultiplier;
+    } catch (priceError) {
+      console.warn('Could not fetch real prices, using calculated prices:', priceError);
+    }
+
+    // Transform raw market data with real prices
     const market = transformMarketData({
       ...rawMarket.account,
       publicKey: rawMarket.publicKey.toString(),
       address: rawMarket.publicKey.toString(),
+      realYesPrice: realPrices.yesPrice,
+      realNoPrice: realPrices.noPrice,
+      yesMultiplier: realPrices.yesMultiplier,
+      noMultiplier: realPrices.noMultiplier,
     });
 
     return Response.json({ market });

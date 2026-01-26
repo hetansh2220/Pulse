@@ -22,9 +22,11 @@ export interface Market {
   initialLiquidity: string;
   volume: string;
 
-  // Pricing (calculated from supplies)
+  // Pricing (from SDK getMarketPriceV2)
   currentYesPrice: number;
   currentNoPrice: number;
+  yesMultiplier?: number; // Payout multiplier for YES
+  noMultiplier?: number;  // Payout multiplier for NO
 
   // Time
   endTime: string; // ISO timestamp

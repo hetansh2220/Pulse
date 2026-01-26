@@ -194,7 +194,7 @@ export default function HomePage() {
               onClick={() => login()}
               className="btn-primary px-5 py-2.5 text-sm font-semibold"
             >
-              Launch App
+              Log In
             </button>
           </div>
         </div>
