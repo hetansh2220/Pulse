@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { PublicKey } from '@solana/web3.js';
-import { createReadClient, transformMarketData } from '@/lib/pnp-client';
+import { fetchMarket, transformMarketData } from '@/lib/pnp-client';
+import { getPrice } from 'pnp-adapter';
+import { Connection } from '@solana/web3.js';
 
 export async function GET(
   request: NextRequest,
@@ -13,32 +14,23 @@ export async function GET(
       return Response.json({ error: 'Market ID is required' }, { status: 400 });
     }
 
-    // Create read-only PNP client
-    const client = createReadClient();
-
-    // Fetch specific market from PNP SDK
-    // Convert marketId string to PublicKey
-    const marketPublicKey = new PublicKey(marketId);
-    const rawMarket = await client.fetchMarket(marketPublicKey);
+    // Fetch market using pnp-adapter (respects network configuration)
+    const rawMarket = await fetchMarket(marketId);
 
     if (!rawMarket) {
       return Response.json({ error: 'Market not found' }, { status: 404 });
     }
 
-    // Fetch real prices and multipliers from SDK
-    let realPrices: { yesPrice?: number; noPrice?: number; yesMultiplier?: number; noMultiplier?: number } = {};
+    // Fetch real prices from pnp-adapter
+    let realPrices: { yesPrice?: number; noPrice?: number } = {};
     try {
-      // Get prices from trading module (yesShare/noShare are the prices)
-      if (client.trading) {
-        const priceData = await client.trading.getPrices(marketPublicKey);
-        realPrices.yesPrice = priceData.yesShare;
-        realPrices.noPrice = priceData.noShare;
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL;
+      if (rpcUrl) {
+        const connection = new Connection(rpcUrl, 'confirmed');
+        const yesPrice = await getPrice(connection, marketId, 'yes');
+        const noPrice = await getPrice(connection, marketId, 'no');
+        realPrices = { yesPrice, noPrice };
       }
-
-      // Get multipliers from market info
-      const marketInfo = await client.getV2MarketInfo(marketId);
-      realPrices.yesMultiplier = marketInfo.yesMultiplier;
-      realPrices.noMultiplier = marketInfo.noMultiplier;
     } catch (priceError) {
       console.warn('Could not fetch real prices, using calculated prices:', priceError);
     }
@@ -46,12 +38,10 @@ export async function GET(
     // Transform raw market data with real prices
     const market = transformMarketData({
       ...rawMarket.account,
-      publicKey: rawMarket.publicKey.toString(),
-      address: rawMarket.publicKey.toString(),
+      publicKey: rawMarket.publicKey,
+      address: rawMarket.publicKey,
       realYesPrice: realPrices.yesPrice,
       realNoPrice: realPrices.noPrice,
-      yesMultiplier: realPrices.yesMultiplier,
-      noMultiplier: realPrices.noMultiplier,
     });
 
     return Response.json({ market });

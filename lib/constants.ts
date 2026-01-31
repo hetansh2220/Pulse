@@ -28,8 +28,14 @@ export type MarketStatus = typeof MARKET_STATUS[number]['value'];
 // Buffer period: 15 minutes after market creation before trading is allowed
 export const BUFFER_PERIOD_MS = 15 * 60 * 1000;
 
-// USDC token mint (SPL token)
-export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'; // Mainnet
+// USDC token mints (SPL token)
+export const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+export const USDC_MINT_DEVNET = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr'; // SPL Token Faucet USDC
+
+// Get USDC mint based on network
+export const USDC_MINT = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta'
+  ? USDC_MINT_MAINNET
+  : USDC_MINT_DEVNET;
 
 // Default slippage tolerance (1%)
 export const DEFAULT_SLIPPAGE = 1;

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { MARKET_CATEGORIES, MARKET_TYPES, MIN_MARKET_LIQUIDITY } from '@/lib/constants';
 import type { MarketCategory } from '@/lib/constants';
 import { useCreateMarket, type P2PSide } from '@/hooks/use-create-market';
+import { useSolanaWallet } from '@/hooks/use-solana-wallet';
+import { useUSDCBalance } from '@/hooks/use-balance';
 import {
   PlusCircle,
   Loader2,
@@ -16,7 +18,8 @@ import {
   AlertCircle,
   Zap,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Wallet
 } from 'lucide-react';
 
 const categoryIcons = {
@@ -29,6 +32,8 @@ const categoryIcons = {
 export default function CreateMarketPage() {
   const router = useRouter();
   const createMarket = useCreateMarket();
+  const { wallet, isConnected, isLoading: walletLoading } = useSolanaWallet();
+  const { data: usdcBalance } = useUSDCBalance();
 
   const [formData, setFormData] = useState({
     question: '',
@@ -96,6 +101,8 @@ export default function CreateMarketPage() {
       newErrors.initialLiquidity = 'Initial liquidity is required';
     } else if (liquidity < MIN_MARKET_LIQUIDITY / 1_000_000) {
       newErrors.initialLiquidity = `Minimum: ${MIN_MARKET_LIQUIDITY / 1_000_000} USDC`;
+    } else if (usdcBalance && liquidity > usdcBalance.balance) {
+      newErrors.initialLiquidity = `Insufficient balance. You have ${usdcBalance.formatted} USDC`;
     }
 
     setErrors(newErrors);
@@ -104,6 +111,11 @@ export default function CreateMarketPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isConnected || !wallet) {
+      return;
+    }
+
     if (!validate()) return;
 
     const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
@@ -123,16 +135,42 @@ export default function CreateMarketPage() {
         creatorSideCap: formData.creatorSideCap ? parseFloat(formData.creatorSideCap) : undefined,
       },
       {
-        onSuccess: (result) => {
-          if (result.marketPublicKey) {
-            router.push(`/markets/${result.marketPublicKey}`);
-          }
+        onSuccess: () => {
+          // Navigate to markets page after successful creation
+          router.push('/markets');
         },
       }
     );
   };
 
   const isSubmitting = createMarket.isPending;
+
+  // Show wallet connection prompt
+  if (!walletLoading && (!isConnected || !wallet)) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="size-10 bg-[#c8ff00]/10 border border-[#c8ff00]/20 flex items-center justify-center">
+              <PlusCircle className="size-5 text-[#c8ff00]" />
+            </div>
+            <div>
+              <p className="text-xs font-mono text-[#c8ff00] uppercase tracking-wider">// Create</p>
+              <h1 className="text-2xl font-bold">New Market</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#12121a] border border-[#c8ff00]/10 p-12 text-center">
+          <Wallet className="size-16 mx-auto mb-4 text-[#6b6b7b]" />
+          <h3 className="font-semibold mb-2 text-lg">Connect Wallet to Create</h3>
+          <p className="text-[#6b6b7b]">
+            Please login to create a prediction market.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -403,9 +441,14 @@ export default function CreateMarketPage() {
             )}
 
             <div>
-              <label className="block text-xs font-mono text-[#6b6b7b] mb-2">
-                Initial Liquidity (USDC)
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs font-mono text-[#6b6b7b]">
+                  Initial Liquidity (USDC)
+                </label>
+                <span className="text-xs text-[#6b6b7b]">
+                  Balance: <span className="text-[#c8ff00]">{usdcBalance?.formatted ?? '0.00'}</span> USDC
+                </span>
+              </div>
               <Input
                 type="number"
                 placeholder="100"
@@ -449,7 +492,7 @@ export default function CreateMarketPage() {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isConnected}
             className="flex-1 py-4 bg-[#c8ff00] text-[#0a0a0f] font-semibold hover:glow-lime transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createReadClient, transformMarketData, filterMarketsByCategory, filterMarketsByStatus, searchMarkets } from '@/lib/pnp-client';
+import { fetchAllMarkets, transformMarketData, filterMarketsByCategory, filterMarketsByStatus, searchMarkets } from '@/lib/pnp-client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +10,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Create read-only PNP client
-    const client = createReadClient();
-
-    // Fetch all markets from PNP SDK
-    const response = await client.fetchMarkets();
+    // Fetch all markets using pnp-adapter (respects network configuration)
+    const marketsData = await fetchAllMarkets();
 
     // Transform raw market data to our Market type
-    const allMarkets = response.data.map((item) =>
+    const allMarkets = marketsData.map((item) =>
       transformMarketData({
         ...item.account,
         publicKey: item.publicKey,

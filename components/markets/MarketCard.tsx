@@ -6,6 +6,7 @@ import { Bookmark } from 'lucide-react';
 import { getMarketDisplayStatus, getStatusStyles } from '@/lib/market-utils';
 import { formatTokenPrice } from '@/lib/format';
 import type { Market } from '@/types/market';
+import TradingModal from '@/components/trading/TradingModal';
 
 interface MarketCardProps {
   market: Market;
@@ -14,6 +15,8 @@ interface MarketCardProps {
 export default function MarketCard({ market }: MarketCardProps) {
   const router = useRouter();
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTokenType, setSelectedTokenType] = useState<'yes' | 'no'>('yes');
 
   const displayStatus = getMarketDisplayStatus(market);
   const statusStyles = getStatusStyles(displayStatus);
@@ -33,7 +36,6 @@ export default function MarketCard({ market }: MarketCardProps) {
   });
 
   const handleClick = () => {
-    console.log(`Navigating to ${JSON.stringify(market)}`);
     router.push(`/markets/${market.id}`);
   };
 
@@ -73,7 +75,11 @@ export default function MarketCard({ market }: MarketCardProps) {
         <div className="flex gap-2 mb-3">
           <button
             className="flex-1 flex flex-col items-start px-3 py-2.5 bg-[#2ed573]/10 border border-[#2ed573]/30 rounded-lg hover:bg-[#2ed573]/20 hover:border-[#2ed573]/50 transition-all"
-            onClick={(e) => { e.stopPropagation(); handleClick(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedTokenType('yes');
+              setIsModalOpen(true);
+            }}
           >
             <div className="flex items-center justify-between w-full">
               <span className="text-sm font-medium text-[#2ed573]">YES</span>
@@ -89,7 +95,11 @@ export default function MarketCard({ market }: MarketCardProps) {
           </button>
           <button
             className="flex-1 flex flex-col items-start px-3 py-2.5 bg-[#ff4757]/10 border border-[#ff4757]/30 rounded-lg hover:bg-[#ff4757]/20 hover:border-[#ff4757]/50 transition-all"
-            onClick={(e) => { e.stopPropagation(); handleClick(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedTokenType('no');
+              setIsModalOpen(true);
+            }}
           >
             <div className="flex items-center justify-between w-full">
               <span className="text-sm font-medium text-[#ff4757]">NO</span>
@@ -115,6 +125,14 @@ export default function MarketCard({ market }: MarketCardProps) {
           </span>
         </div>
       </div>
+
+      {/* Trading Modal */}
+      <TradingModal
+        market={market}
+        tokenType={selectedTokenType}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

@@ -39,6 +39,9 @@ export interface Market {
 
   // Trading restrictions
   bufferPeriodActive: boolean;
+
+  // Market version (1, 2, or 3)
+  version: 1 | 2 | 3;
 }
 
 export interface MarketFilters {

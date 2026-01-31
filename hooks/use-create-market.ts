@@ -1,89 +1,116 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
+import { useSolanaWallet } from './use-solana-wallet';
+import { createV2Market, createV3Market } from '@/lib/pnp-adapter';
 
 export type MarketCategory = 'general' | 'twitter' | 'youtube' | 'coin';
 export type MarketType = 'v2' | 'p2p';
 export type P2PSide = 'yes' | 'no';
 
-interface CreateMarketParams {
+export interface CreateMarketParams {
   question: string;
   category: MarketCategory;
   marketType: MarketType;
   endTime: Date;
-  initialLiquidity: number;
+  initialLiquidity: number; // In USDC
   tweetUrl?: string;
   youtubeUrl?: string;
   protocolName?: string;
   tokenAddress?: string;
   side?: P2PSide;
-  creatorSideCap?: number;
+  creatorSideCap?: number; // In USDC
 }
 
-interface CreateMarketResult {
+export interface CreateMarketResult {
   success: boolean;
-  signature?: string;
-  marketPublicKey?: string;
-  yesTokenMint?: string;
-  noTokenMint?: string;
-  error?: string;
+  signature: string;
+  marketType: MarketType;
 }
 
 export function useCreateMarket() {
-  const { authenticated, getAccessToken } = usePrivy();
+  const { wallet, isConnected } = useSolanaWallet();
   const queryClient = useQueryClient();
 
   return useMutation<CreateMarketResult, Error, CreateMarketParams>({
     mutationFn: async (params) => {
-      if (!authenticated) {
+      if (!wallet) {
+        throw new Error('Wallet not connected. Please connect your wallet to create a market.');
+      }
+
+      if (!isConnected) {
         throw new Error('Please login to create a market');
       }
 
-      // Get Privy access token for server authentication
-      const accessToken = await getAccessToken();
+      // Validate inputs
+      if (params.question.length < 10 || params.question.length > 200) {
+        throw new Error('Question must be between 10 and 200 characters');
+      }
 
-      const response = await fetch('/api/create-market', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          question: params.question,
-          category: params.category,
-          marketType: params.marketType,
-          endTime: params.endTime.toISOString(),
+      if (params.endTime <= new Date()) {
+        throw new Error('End time must be in the future');
+      }
+
+      if (params.initialLiquidity < 100) {
+        throw new Error('Minimum liquidity is 100 USDC');
+      }
+
+      // Build question with category-specific metadata
+      let fullQuestion = params.question;
+
+      if (params.category === 'twitter' && params.tweetUrl) {
+        fullQuestion = `${params.question} [Tweet: ${params.tweetUrl}]`;
+      } else if (params.category === 'youtube' && params.youtubeUrl) {
+        fullQuestion = `${params.question} [Video: ${params.youtubeUrl}]`;
+      } else if (params.category === 'coin' && params.protocolName) {
+        fullQuestion = `${params.question} [Protocol: ${params.protocolName}]`;
+      }
+
+      let result: { txSig: string; marketAddress: string };
+
+      if (params.marketType === 'v2') {
+        // Create V2 AMM market
+        result = await createV2Market(wallet, {
+          question: fullQuestion,
           initialLiquidity: params.initialLiquidity,
-          tweetUrl: params.tweetUrl,
-          youtubeUrl: params.youtubeUrl,
-          protocolName: params.protocolName,
-          tokenAddress: params.tokenAddress,
+          endTime: params.endTime,
+        });
+      } else {
+        // Create V3 P2P market
+        if (!params.side) {
+          throw new Error('Side is required for P2P markets');
+        }
+
+        result = await createV3Market(wallet, {
+          question: fullQuestion,
+          amount: params.initialLiquidity,
           side: params.side,
           creatorSideCap: params.creatorSideCap,
-        }),
+          endTime: params.endTime,
+        });
+      }
+
+      return {
+        success: true,
+        signature: result.txSig,
+        marketType: params.marketType,
+      };
+    },
+    onSuccess: (data) => {
+      toast.success('Market created successfully!', {
+        description: `Transaction: ${data.signature.slice(0, 8)}...`,
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create market');
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create market');
-      }
-
-      return result;
-    },
-    onSuccess: () => {
+      // Invalidate markets query to refetch
       queryClient.invalidateQueries({ queryKey: ['markets'] });
-      toast.success('Market created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
     },
     onError: (error) => {
       console.error('Market creation failed:', error);
-      toast.error(error.message || 'Failed to create market');
+      toast.error('Failed to create market', {
+        description: error.message,
+      });
     },
   });
 }
