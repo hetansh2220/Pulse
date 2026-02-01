@@ -52,8 +52,8 @@ export function useCreateMarket() {
         throw new Error('End time must be in the future');
       }
 
-      if (params.initialLiquidity < 100) {
-        throw new Error('Minimum liquidity is 100 USDC');
+      if (params.initialLiquidity <= 0) {
+        throw new Error('Liquidity must be greater than 0');
       }
 
       // Build question with category-specific metadata

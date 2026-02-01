@@ -24,8 +24,11 @@ import {
   type MarketVersion,
 } from 'pnp-adapter';
 
-// Set network to devnet BEFORE any other operations
-setNetwork('devnet');
+// Get the network from environment (defaults to mainnet)
+const network = (process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta') as 'mainnet-beta' | 'devnet';
+
+// Set network BEFORE any other operations
+setNetwork(network);
 
 // Collateral mint addresses per network
 const COLLATERAL_MINTS = {
@@ -34,8 +37,7 @@ const COLLATERAL_MINTS = {
 };
 
 // Get the correct collateral mint for current network
-const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
-export const COLLATERAL_MINT = COLLATERAL_MINTS[network as keyof typeof COLLATERAL_MINTS] || COLLATERAL_MINTS.devnet;
+export const COLLATERAL_MINT = COLLATERAL_MINTS[network];
 
 // Wallet interface compatible with Privy's useSolanaWallets
 export interface PNPWallet {

@@ -39,7 +39,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               </Button>
 
               <Link href="/markets" className="flex items-center gap-2 font-semibold text-lg">
-                <span className="hidden sm:inline">PNP Markets</span>
+                <span className="hidden sm:inline">PULSE</span>
               </Link>
             </div>
 

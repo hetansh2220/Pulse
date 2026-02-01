@@ -40,8 +40,8 @@ export const USDC_MINT = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-bet
 // Default slippage tolerance (1%)
 export const DEFAULT_SLIPPAGE = 1;
 
-// Minimum market liquidity (in USDC, 6 decimals)
-export const MIN_MARKET_LIQUIDITY = 100 * 1_000_000; // 100 USDC
+// Minimum market liquidity (in USDC, 6 decimals) - no minimum required
+export const MIN_MARKET_LIQUIDITY = 0;
 
 // Query stale times (milliseconds)
 export const STALE_TIME_MARKETS = 30_000; // 30 seconds

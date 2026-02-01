@@ -2,12 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
-import { MARKET_CATEGORIES, MARKET_TYPES, MIN_MARKET_LIQUIDITY } from '@/lib/constants';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MARKET_CATEGORIES, MARKET_TYPES } from '@/lib/constants';
 import type { MarketCategory } from '@/lib/constants';
 import { useCreateMarket, type P2PSide } from '@/hooks/use-create-market';
 import { useSolanaWallet } from '@/hooks/use-solana-wallet';
 import { useUSDCBalance } from '@/hooks/use-balance';
+import { cn } from '@/lib/utils';
 import {
   PlusCircle,
   Loader2,
@@ -19,8 +25,23 @@ import {
   Zap,
   ThumbsUp,
   ThumbsDown,
-  Wallet
+  Wallet,
+  CalendarIcon,
+  Clock
 } from 'lucide-react';
+
+// Generate time options (every 30 minutes)
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const hours = Math.floor(i / 2);
+  const minutes = i % 2 === 0 ? '00' : '30';
+  const time = `${hours.toString().padStart(2, '0')}:${minutes}`;
+  const label = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  return { value: time, label };
+});
 
 const categoryIcons = {
   general: Globe,
@@ -39,7 +60,7 @@ export default function CreateMarketPage() {
     question: '',
     category: 'general' as MarketCategory,
     marketType: 'v2' as 'v2' | 'p2p',
-    endDate: '',
+    endDate: undefined as Date | undefined,
     endTime: '',
     initialLiquidity: '',
     tweetUrl: '',
@@ -90,7 +111,9 @@ export default function CreateMarketPage() {
     if (!formData.endDate || !formData.endTime) {
       newErrors.endTime = 'End date and time are required';
     } else {
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+      const [hours, minutes] = formData.endTime.split(':').map(Number);
+      const endDateTime = new Date(formData.endDate);
+      endDateTime.setHours(hours, minutes, 0, 0);
       if (endDateTime <= new Date()) {
         newErrors.endTime = 'End time must be in the future';
       }
@@ -99,8 +122,8 @@ export default function CreateMarketPage() {
     const liquidity = parseFloat(formData.initialLiquidity);
     if (!formData.initialLiquidity || isNaN(liquidity)) {
       newErrors.initialLiquidity = 'Initial liquidity is required';
-    } else if (liquidity < MIN_MARKET_LIQUIDITY / 1_000_000) {
-      newErrors.initialLiquidity = `Minimum: ${MIN_MARKET_LIQUIDITY / 1_000_000} USDC`;
+    } else if (liquidity <= 0) {
+      newErrors.initialLiquidity = 'Liquidity must be greater than 0';
     } else if (usdcBalance && liquidity > usdcBalance.balance) {
       newErrors.initialLiquidity = `Insufficient balance. You have ${usdcBalance.formatted} USDC`;
     }
@@ -118,7 +141,9 @@ export default function CreateMarketPage() {
 
     if (!validate()) return;
 
-    const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+    const [hours, minutes] = formData.endTime.split(':').map(Number);
+    const endDateTime = new Date(formData.endDate!);
+    endDateTime.setHours(hours, minutes, 0, 0);
 
     createMarket.mutate(
       {
@@ -417,23 +442,49 @@ export default function CreateMarketPage() {
                 <label className="block text-xs font-mono text-[#6b6b7b] mb-2">
                   End Date
                 </label>
-                <Input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="h-12 bg-[#1a1a24] border-[#c8ff00]/10 focus:border-[#c8ff00]/30"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal bg-[#1a1a24] border-[#c8ff00]/10 hover:bg-[#1a1a24] hover:border-[#c8ff00]/30",
+                        !formData.endDate && "text-[#6b6b7b]"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-[#12121a] border-[#c8ff00]/20" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.endDate}
+                      onSelect={(date) => setFormData({ ...formData, endDate: date })}
+                      disabled={(date) => date < new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <label className="block text-xs font-mono text-[#6b6b7b] mb-2">
                   End Time
                 </label>
-                <Input
-                  type="time"
+                <Select
                   value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="h-12 bg-[#1a1a24] border-[#c8ff00]/10 focus:border-[#c8ff00]/30"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, endTime: value })}
+                >
+                  <SelectTrigger className="w-full h-12 bg-[#1a1a24] border-[#c8ff00]/10 hover:border-[#c8ff00]/30">
+                    <Clock className="mr-2 h-4 w-4 text-[#6b6b7b]" />
+                    <SelectValue placeholder="Pick a time" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#12121a] border-[#c8ff00]/20 max-h-60">
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {errors.endTime && (
@@ -451,19 +502,15 @@ export default function CreateMarketPage() {
               </div>
               <Input
                 type="number"
-                placeholder="100"
-                min={MIN_MARKET_LIQUIDITY / 1_000_000}
-                step="1"
+                placeholder="Enter amount"
+                min={0}
+                step="0.01"
                 value={formData.initialLiquidity}
                 onChange={(e) => setFormData({ ...formData, initialLiquidity: e.target.value })}
                 className="h-12 bg-[#1a1a24] border-[#c8ff00]/10 focus:border-[#c8ff00]/30 font-mono"
               />
-              {errors.initialLiquidity ? (
+              {errors.initialLiquidity && (
                 <p className="text-xs text-[#ff4757] mt-1">{errors.initialLiquidity}</p>
-              ) : (
-                <p className="text-xs text-[#6b6b7b] mt-1">
-                  Minimum: {MIN_MARKET_LIQUIDITY / 1_000_000} USDC
-                </p>
               )}
             </div>
           </div>

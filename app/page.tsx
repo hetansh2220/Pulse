@@ -17,8 +17,11 @@ import {
   MessageCircle,
   Play,
   Coins,
-  ChevronRight
+  ChevronRight,
+  User,
+  LogOut
 } from 'lucide-react'
+import { formatAddress } from '@/lib/format'
 import { getMarketDisplayStatus, getStatusStyles } from '@/lib/market-utils'
 import MarketImage from '@/components/markets/MarketImage'
 
@@ -43,39 +46,39 @@ const stats = [
 
 const features = [
   {
+    icon: Globe,
+    title: 'Public State, Private Intent',
+    description: 'Markets are fully on-chain and verifiable, while user intent and execution are abstracted from the UI.',
+    color: 'lime'
+  },
+  {
+    icon: Shield,
+    title: 'Keyless, Server-Side Signing',
+    description: 'Private keys never touch the client. Transactions are signed securely server-side using embedded wallets.',
+    color: 'cyan'
+  },
+  {
     icon: Zap,
-    title: 'Sub-Second Trades',
-    description: 'Execute trades instantly on Solana. No waiting for confirmations.',
+    title: 'Privacy-Ready Infrastructure',
+    description: 'Built on the PNP SDK to support private order flow and confidential execution patterns.',
+    color: 'lime'
+  },
+  {
+    icon: Target,
+    title: 'Inference-Resistant Market Design',
+    description: 'Buffer periods and execution isolation reduce front-running and strategy inference.',
+    color: 'cyan'
+  },
+  {
+    icon: BarChart3,
+    title: 'Mainnet-Verified Execution',
+    description: 'Live on Solana mainnet with real market data, real pricing, and real constraints.',
     color: 'lime'
   },
   {
     icon: Wallet,
-    title: 'No Wallet Required',
-    description: 'Sign up with email. We create your embedded wallet automatically.',
-    color: 'cyan'
-  },
-  {
-    icon: Shield,
-    title: 'Fully On-Chain',
-    description: 'All markets and trades live on Solana. Transparent and trustless.',
-    color: 'lime'
-  },
-  {
-    icon: BarChart3,
-    title: 'Real-Time Prices',
-    description: 'Watch odds shift live as the market reacts to new information.',
-    color: 'cyan'
-  },
-  {
-    icon: Target,
-    title: 'Oracle Resolution',
-    description: 'Automated resolution using trusted data feeds. No manipulation.',
-    color: 'lime'
-  },
-  {
-    icon: Globe,
-    title: 'Global Access',
-    description: 'Trade from anywhere. No KYC, no restrictions, just connect.',
+    title: 'Modular PNP SDK Abstraction',
+    description: 'PNP SDK interactions are encapsulated in a reusable layer, making the system extensible and privacy-safe by default.',
     color: 'cyan'
   }
 ]
@@ -119,16 +122,16 @@ const steps = [
 ]
 
 export default function HomePage() {
-  const { login, authenticated, ready } = usePrivy()
+  const { login, logout, authenticated, user, ready } = usePrivy()
   const router = useRouter()
   const [featuredMarkets, setFeaturedMarkets] = useState<Market[]>([])
   const [isLoadingMarkets, setIsLoadingMarkets] = useState(true)
 
-  useEffect(() => {
-    if (ready && authenticated) {
-      router.push('/markets')
-    }
-  }, [authenticated, ready, router])
+  const solanaWallet = user?.linkedAccounts?.find(
+    (account) => account.type === 'wallet' && account.walletClientType === 'privy'
+  )
+  const walletAddress = solanaWallet && 'address' in solanaWallet ? solanaWallet.address : undefined
+
 
   useEffect(() => {
     async function fetchMarkets() {
@@ -167,7 +170,7 @@ export default function HomePage() {
             <div className="size-9 bg-[#c8ff00] flex items-center justify-center group-hover:glow-lime transition-all">
               <TrendingUp className="size-5 text-[#0a0a0f]" />
             </div>
-            <span className="font-bold text-xl tracking-tight">PNP</span>
+            <span className="font-bold text-xl tracking-tight">PULSE</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -190,12 +193,30 @@ export default function HomePage() {
             >
               Explore
             </Button>
-            <button
-              onClick={() => login()}
-              className="btn-primary px-5 py-2.5 text-sm font-semibold"
-            >
-              Log In
-            </button>
+            {authenticated ? (
+              <>
+                {walletAddress && (
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-[#c8ff00]/20 bg-[#c8ff00]/5">
+                    <User className="size-4 text-[#c8ff00]" />
+                    <span className="font-mono text-sm text-[#e8e8e8]">{formatAddress(walletAddress)}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => logout()}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#6b6b7b] hover:text-[#ff4757] transition-colors"
+                >
+                  <LogOut className="size-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => login()}
+                className="btn-primary px-5 py-2.5 text-sm font-semibold"
+              >
+                Log In
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -259,7 +280,7 @@ export default function HomePage() {
               <div className="absolute inset-8 border border-[#00f5ff]/20 rotate-45 animate-float" style={{ animationDelay: '0.5s' }} />
               <div className="absolute inset-16 border border-[#c8ff00]/10 rotate-45 animate-float" style={{ animationDelay: '1s' }} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-6xl font-bold text-[#c8ff00]/10">PNP</div>
+                <div className="text-6xl font-bold text-[#c8ff00]/10">PULSE</div>
               </div>
             </div>
           </div>
@@ -517,7 +538,7 @@ export default function HomePage() {
             <div className="size-8 bg-[#c8ff00] flex items-center justify-center">
               <TrendingUp className="size-4 text-[#0a0a0f]" />
             </div>
-            <span className="font-bold text-lg">PNP Markets</span>
+            <span className="font-bold text-lg">PULSE Markets</span>
           </div>
 
           <div className="flex items-center gap-8 text-sm text-[#6b6b7b]">

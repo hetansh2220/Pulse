@@ -268,7 +268,7 @@ export default function TradingModal({ market, tokenType, isOpen, onClose }: Tra
             </Button>
 
             <p className="text-xs text-[#6b6b7b] text-center mt-4">
-              Network: Devnet | Prices may vary due to market activity
+              Network: Mainnet | Prices may vary due to market activity
             </p>
           </>
         )}
