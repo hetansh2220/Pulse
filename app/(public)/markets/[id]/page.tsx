@@ -103,8 +103,6 @@ export default function MarketDetailPage({ params }: { params: Promise<{ id: str
       marketId: market.id,
       tokenType,
       amount: parseFloat(amount),
-      creatorAddress: market.creator,
-      version: market.version,
     };
     if (tradeAction === 'buy') {
       tradingMutation.mutate(params);

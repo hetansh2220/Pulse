@@ -7,12 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Market } from '@/types/market';
 import { useTradingMutation, useSellMutation } from '@/hooks/use-trading';
-import { useSolanaWallet } from '@/hooks/use-solana-wallet';
-import { useUSDCBalance } from '@/hooks/use-balance';
-import { useMarketTokenBalances } from '@/hooks/use-token-balance';
 import { estimateTokensReceived, estimateUsdcReceived, getBufferTimeRemaining } from '@/lib/market-utils';
 import { formatTokenPrice, formatProbability, formatCurrency } from '@/lib/format';
-import { AlertCircle, Loader2, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { AlertCircle, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TradingPanelProps {
   market: Market;
@@ -24,15 +21,6 @@ export default function TradingPanel({ market }: TradingPanelProps) {
   const [tradeAction, setTradeAction] = useState<TradeAction>('buy');
   const [tokenType, setTokenType] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState<string>('');
-
-  // Wallet and balance hooks
-  const { wallet, isConnected, isLoading: walletLoading } = useSolanaWallet();
-  const { data: usdcBalance } = useUSDCBalance();
-  const { data: tokenBalances } = useMarketTokenBalances(
-    market.yesTokenMint,
-    market.noTokenMint
-  );
-
   const buyMutation = useTradingMutation();
   const sellMutation = useSellMutation();
 
@@ -69,36 +57,16 @@ export default function TradingPanel({ market }: TradingPanelProps) {
       ? estimatedUsdc / parseFloat(amount)
       : 0;
 
-  // Check if user has sufficient balance
-  const currentBalance = tradeAction === 'buy'
-    ? usdcBalance?.balance ?? 0
-    : tokenType === 'yes'
-    ? tokenBalances?.yesBalance ?? 0
-    : tokenBalances?.noBalance ?? 0;
-
-  const hasInsufficientBalance = amount && parseFloat(amount) > currentBalance;
-
-  const canTrade =
-    isConnected &&
-    wallet &&
-    !isInBuffer &&
-    !isResolved &&
-    !isEnded &&
-    amount &&
-    parseFloat(amount) > 0 &&
-    !hasInsufficientBalance;
-
+  const canTrade = !isInBuffer && !isResolved && !isEnded && amount && parseFloat(amount) > 0;
   const isPending = buyMutation.isPending || sellMutation.isPending;
 
   const handleTrade = () => {
-    if (!canTrade || !wallet) return;
+    if (!canTrade) return;
 
     const params = {
       marketId: market.id,
       tokenType,
       amount: parseFloat(amount),
-      creatorAddress: market.creator,
-      version: market.version,
     };
 
     if (tradeAction === 'buy') {
@@ -107,36 +75,6 @@ export default function TradingPanel({ market }: TradingPanelProps) {
       sellMutation.mutate(params);
     }
   };
-
-  const handleMaxClick = () => {
-    setAmount(currentBalance.toFixed(2));
-  };
-
-  // Show loading state for wallet
-  if (walletLoading) {
-    return (
-      <Card className="p-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
-      </Card>
-    );
-  }
-
-  // Show wallet connection prompt
-  if (!isConnected || !wallet) {
-    return (
-      <Card className="p-6">
-        <div className="text-center py-6">
-          <Wallet className="size-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="font-semibold mb-2">Connect Wallet to Trade</h3>
-          <p className="text-sm text-muted-foreground">
-            Please login to start trading on this market.
-          </p>
-        </div>
-      </Card>
-    );
-  }
 
   // Show buffer period warning
   if (isInBuffer) {
@@ -199,10 +137,7 @@ export default function TradingPanel({ market }: TradingPanelProps) {
       {/* Buy/Sell Tabs */}
       <div className="grid grid-cols-2 gap-2 mb-6">
         <button
-          onClick={() => {
-            setTradeAction('buy');
-            setAmount('');
-          }}
+          onClick={() => setTradeAction('buy')}
           className={`py-3 px-4 text-sm font-medium rounded-lg transition-all ${
             tradeAction === 'buy'
               ? 'bg-green-600 text-white'
@@ -212,10 +147,7 @@ export default function TradingPanel({ market }: TradingPanelProps) {
           Buy
         </button>
         <button
-          onClick={() => {
-            setTradeAction('sell');
-            setAmount('');
-          }}
+          onClick={() => setTradeAction('sell')}
           className={`py-3 px-4 text-sm font-medium rounded-lg transition-all ${
             tradeAction === 'sell'
               ? 'bg-red-600 text-white'
@@ -232,10 +164,7 @@ export default function TradingPanel({ market }: TradingPanelProps) {
         <div className="grid grid-cols-2 gap-3">
           {/* YES Token */}
           <button
-            onClick={() => {
-              setTokenType('yes');
-              setAmount('');
-            }}
+            onClick={() => setTokenType('yes')}
             className={`p-4 rounded-lg border-2 transition-all text-left ${
               tokenType === 'yes'
                 ? 'border-green-500 bg-green-500/10'
@@ -256,10 +185,7 @@ export default function TradingPanel({ market }: TradingPanelProps) {
 
           {/* NO Token */}
           <button
-            onClick={() => {
-              setTokenType('no');
-              setAmount('');
-            }}
+            onClick={() => setTokenType('no')}
             className={`p-4 rounded-lg border-2 transition-all text-left ${
               tokenType === 'no'
                 ? 'border-red-500 bg-red-500/10'
@@ -282,27 +208,9 @@ export default function TradingPanel({ market }: TradingPanelProps) {
 
       {/* Amount Input */}
       <div className="space-y-2 mb-6">
-        <div className="flex justify-between items-center">
-          <Label htmlFor="amount">
-            {tradeAction === 'buy' ? 'Amount (USDC)' : 'Tokens to Sell'}
-          </Label>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>
-              Balance: {tradeAction === 'buy'
-                ? `${usdcBalance?.formatted ?? '0.00'} USDC`
-                : tokenType === 'yes'
-                ? `${tokenBalances?.yesFormatted ?? '0.00'} YES`
-                : `${tokenBalances?.noFormatted ?? '0.00'} NO`
-              }
-            </span>
-            <button
-              onClick={handleMaxClick}
-              className="text-primary hover:underline font-medium"
-            >
-              Max
-            </button>
-          </div>
-        </div>
+        <Label htmlFor="amount">
+          {tradeAction === 'buy' ? 'Amount (USDC)' : 'Tokens to Sell'}
+        </Label>
         <Input
           id="amount"
           type="number"
@@ -311,11 +219,7 @@ export default function TradingPanel({ market }: TradingPanelProps) {
           onChange={(e) => setAmount(e.target.value)}
           min="0"
           step="0.01"
-          className={hasInsufficientBalance ? 'border-red-500' : ''}
         />
-        {hasInsufficientBalance && (
-          <p className="text-xs text-red-500">Insufficient balance</p>
-        )}
       </div>
 
       {/* Estimation */}

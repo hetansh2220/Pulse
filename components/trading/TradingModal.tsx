@@ -74,7 +74,6 @@ export default function TradingModal({ market, tokenType, isOpen, onClose }: Tra
         tokenType,
         amount: amountNum,
         creatorAddress: market.creator,
-        version: market.version,
       },
       {
         onSuccess: () => {

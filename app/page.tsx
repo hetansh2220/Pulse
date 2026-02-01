@@ -47,38 +47,38 @@ const stats = [
 const features = [
   {
     icon: Globe,
-    title: 'Public State, Private Intent',
-    description: 'Markets are fully on-chain and verifiable, while user intent and execution are abstracted from the UI.',
+    title: 'Fully Permissionless',
+    description: 'Anyone can create and trade on markets. No gatekeepers, no approvals needed—just connect and start trading.',
     color: 'lime'
   },
   {
     icon: Shield,
-    title: 'Keyless, Server-Side Signing',
-    description: 'Private keys never touch the client. Transactions are signed securely server-side using embedded wallets.',
+    title: 'Trustless & On-Chain',
+    description: 'All markets and trades are fully on-chain. Transparent, verifiable, and secured by Solana consensus.',
     color: 'cyan'
   },
   {
     icon: Zap,
-    title: 'Privacy-Ready Infrastructure',
-    description: 'Built on the PNP SDK to support private order flow and confidential execution patterns.',
+    title: 'Sub-Second Finality',
+    description: 'Built on Solana for lightning-fast execution. Trades settle in under a second with minimal fees.',
     color: 'lime'
   },
   {
     icon: Target,
-    title: 'Inference-Resistant Market Design',
-    description: 'Buffer periods and execution isolation reduce front-running and strategy inference.',
+    title: 'Real Oracle Data',
+    description: 'Markets resolve using verifiable on-chain data from Twitter, YouTube, DeFi protocols, and more.',
     color: 'cyan'
   },
   {
     icon: BarChart3,
-    title: 'Mainnet-Verified Execution',
-    description: 'Live on Solana mainnet with real market data, real pricing, and real constraints.',
+    title: 'AMM-Powered Liquidity',
+    description: 'Automated market makers ensure constant liquidity. Trade any size, anytime, with predictable pricing.',
     color: 'lime'
   },
   {
     icon: Wallet,
-    title: 'Modular PNP SDK Abstraction',
-    description: 'PNP SDK interactions are encapsulated in a reusable layer, making the system extensible and privacy-safe by default.',
+    title: 'Embedded Wallets',
+    description: 'Sign up with just your email. No browser extensions or seed phrases—we handle the complexity.',
     color: 'cyan'
   }
 ]
