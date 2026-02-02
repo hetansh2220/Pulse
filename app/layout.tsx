@@ -17,7 +17,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "PULSE | Solana Prediction Markets",
-  description: "Trade prediction markets on Solana with PULSE Protocol",
+  description: "Trade prediction markets on Solana with PULSE ",
 };
 
 export default function RootLayout({
